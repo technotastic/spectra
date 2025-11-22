@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPECTRA - Retro Puzzle Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="crt-screen">
+        <div class="scanlines"></div>
+        
+        <div class="game-container">
+            <header class="game-header">
+                <div class="title">SPECTRA</div>
+                <div class="stats">
+                    <div class="stat-row">
+                        <span class="label">SCORE</span>
+                        <span class="value" id="score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="label">LEVEL</span>
+                        <span class="value" id="level">1</span>
+                    </div>
+                    <div class="stat-row">
+                        <span class="label">TIME</span>
+                        <span class="value" id="timer">30</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="game-board" id="gameBoard"></div>
+
+            <div class="game-footer">
+                <div class="combo-display" id="comboDisplay"></div>
+                <button class="btn-restart" id="restartBtn">NEW GAME</button>
+                <div class="high-score">
+                    <span class="label">HI-SCORE</span>
+                    <span class="value" id="highScore">0</span>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <p>Click adjacent tiles of the same color. Match 3+ to clear and earn combos!</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
