@@ -208,9 +208,15 @@ class SpectraGame {
         const connected = this.getConnected(row, col);
         if (connected.size >= 3) {
             this.selected = connected;
-            this.render();
+            if (!this.isGameOver) this.render();
             // Auto-clear after brief delay for visual feedback
-            setTimeout(() => this.clearSelected(), 150);
+            setTimeout(() => {
+                if (!this.isGameOver) this.clearSelected();
+            }, 150);
+        } else {
+            // Wrong click - reset combo
+            this.combo = 0;
+            if (!this.isGameOver) this.render();
         }
     }
 
