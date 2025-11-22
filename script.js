@@ -1,8 +1,6 @@
 class SpectraGame {
     constructor() {
-        this.cols = 6;
-        this.rows = 6;
-        this.colors = ['red', 'blue', 'yellow', 'green', 'purple', 'cyan'];
+        this.difficulty = 'medium'; // easy, medium, hard
         this.board = [];
         this.selected = new Set();
         this.score = 0;
@@ -10,16 +8,52 @@ class SpectraGame {
         this.moves = 0;
         this.combo = 0;
         this.isAnimating = false;
-        this.timeLeft = 30;
-        this.maxTime = 30;
         this.timerInterval = null;
         this.isGameOver = false;
         this.lastClearTime = 0;
-        this.comboTimeout = 1; // Reset combo if no clear for 1 second
 
         this.initElements();
         this.loadHighScore();
-        this.init();
+        this.setupDifficulty('medium');
+    }
+
+    setupDifficulty(difficulty) {
+        this.difficulty = difficulty;
+        
+        const difficultySettings = {
+            easy: {
+                cols: 5,
+                rows: 5,
+                colors: ['red', 'blue', 'yellow', 'green'],
+                timeLeft: 45,
+                maxTime: 45,
+                comboTimeout: 2
+            },
+            medium: {
+                cols: 6,
+                rows: 6,
+                colors: ['red', 'blue', 'yellow', 'green', 'purple', 'cyan'],
+                timeLeft: 30,
+                maxTime: 30,
+                comboTimeout: 1
+            },
+            hard: {
+                cols: 7,
+                rows: 7,
+                colors: ['red', 'blue', 'yellow', 'green', 'purple', 'cyan', 'orange'],
+                timeLeft: 20,
+                maxTime: 20,
+                comboTimeout: 0.5
+            }
+        };
+
+        const settings = difficultySettings[difficulty];
+        this.cols = settings.cols;
+        this.rows = settings.rows;
+        this.colors = settings.colors;
+        this.timeLeft = settings.timeLeft;
+        this.maxTime = settings.maxTime;
+        this.comboTimeout = settings.comboTimeout;
     }
 
     initElements() {
@@ -31,6 +65,34 @@ class SpectraGame {
         this.restartBtn = document.getElementById('restartBtn');
         this.timerEl = document.getElementById('timer');
         this.restartBtn.addEventListener('click', () => this.init());
+        
+        // Handle clicks anywhere on board, including gaps
+        this.boardEl.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tile')) {
+                const key = e.target.dataset.key;
+                const [row, col] = key.split(',').map(Number);
+                this.onTileClick(row, col);
+            } else if (e.target === this.boardEl) {
+                // Click on gap - find nearest tile
+                const rect = this.boardEl.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const tileSize = 50;
+                const gap = 3;
+                const col = Math.floor(x / (tileSize + gap));
+                const row = Math.floor(y / (tileSize + gap));
+                
+                if (row >= 0 && row < this.rows && col >= 0 && col < this.cols) {
+                    this.onTileClick(row, col);
+                }
+            }
+        });
+    }
+
+    startGame(difficulty) {
+        this.setupDifficulty(difficulty);
+        this.init();
     }
 
     init() {
@@ -73,18 +135,34 @@ class SpectraGame {
     }
 
     generateBoard() {
-        const board = [];
-        for (let r = 0; r < this.rows; r++) {
-            board[r] = [];
-            for (let c = 0; c < this.cols; c++) {
-                let color = this.colors[Math.floor(Math.random() * this.colors.length)];
-                // Avoid 3-in-a-row on generation
-                while (this.checkInitialMatch(board, r, c, color)) {
+        let board;
+        let attempts = 0;
+        
+        do {
+            board = [];
+            for (let r = 0; r < this.rows; r++) {
+                board[r] = [];
+                for (let c = 0; c < this.cols; c++) {
+                    let color;
+                    
+                    // All difficulties use full color range (evenly distributed)
                     color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                    
+                    // Avoid 3-in-a-row on generation
+                    let attempts2 = 0;
+                    while (this.checkInitialMatch(board, r, c, color) && attempts2 < 10) {
+                        color = this.colors[Math.floor(Math.random() * this.colors.length)];
+                        attempts2++;
+                    }
+                    board[r][c] = color;
                 }
-                board[r][c] = color;
             }
-        }
+            
+            // Temporarily set board to check for valid moves
+            this.board = board;
+            attempts++;
+        } while (!this.hasValidMoves() && attempts < 50);
+        
         return board;
     }
 
@@ -333,6 +411,9 @@ class SpectraGame {
 
     render() {
         this.boardEl.innerHTML = '';
+        this.boardEl.style.gridTemplateColumns = `repeat(${this.cols}, 50px)`;
+        this.boardEl.style.gridTemplateRows = `repeat(${this.rows}, 50px)`;
+        
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const color = this.board[r][c];
@@ -349,17 +430,6 @@ class SpectraGame {
                     tile.classList.add('selected');
                 }
 
-                if (color && this.selected.size > 0 && !this.selected.has(key)) {
-                    const [firstKey] = this.selected;
-                    const [firstRow, firstCol] = firstKey.split(',').map(Number);
-                    if (this.board[firstRow][firstCol] === color) {
-                        const connected = this.getConnected(r, c);
-                        if (connected.size >= 3) {
-                            tile.classList.add('preview');
-                        }
-                    }
-                }
-
                 tile.addEventListener('click', () => this.onTileClick(r, c));
                 this.boardEl.appendChild(tile);
             }
@@ -368,14 +438,16 @@ class SpectraGame {
     }
 
     loadHighScore() {
-        const high = localStorage.getItem('spectra-highscore') || '0';
+        const key = `spectra-highscore-${this.difficulty}`;
+        const high = localStorage.getItem(key) || '0';
         return Math.max(parseInt(high), this.score);
     }
 
     saveHighScore() {
-        const high = localStorage.getItem('spectra-highscore') || '0';
+        const key = `spectra-highscore-${this.difficulty}`;
+        const high = localStorage.getItem(key) || '0';
         if (this.score > parseInt(high)) {
-            localStorage.setItem('spectra-highscore', this.score.toString());
+            localStorage.setItem(key, this.score.toString());
         }
     }
 }
@@ -384,6 +456,27 @@ class SpectraGame {
 let game;
 window.addEventListener('DOMContentLoaded', () => {
     game = new SpectraGame();
+    
+    const difficultyMenu = document.getElementById('difficultyMenu');
+    const gameContainer = document.querySelector('.game-container');
+    const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+    
+    // Difficulty selection
+    difficultyBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const difficulty = e.target.dataset.difficulty;
+            difficultyMenu.style.display = 'none';
+            gameContainer.style.display = 'flex';
+            game.startGame(difficulty);
+        });
+    });
+    
+    // Restart button
+    const restartBtn = document.getElementById('restartBtn');
+    restartBtn.addEventListener('click', () => {
+        difficultyMenu.style.display = 'flex';
+        gameContainer.style.display = 'none';
+    });
     
     // Disable right-click context menu
     document.addEventListener('contextmenu', (e) => e.preventDefault());

@@ -10,7 +10,19 @@
     <div class="crt-screen">
         <div class="scanlines"></div>
         
-        <div class="game-container">
+        <div class="difficulty-menu" id="difficultyMenu">
+            <div class="menu-container">
+                <div class="title">SPECTRA</div>
+                <div class="menu-subtitle">SELECT DIFFICULTY</div>
+                <div class="difficulty-buttons">
+                    <button class="difficulty-btn" data-difficulty="easy">EASY</button>
+                    <button class="difficulty-btn" data-difficulty="medium">MEDIUM</button>
+                    <button class="difficulty-btn" data-difficulty="hard">HARD</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-container" style="display: none;">
             <header class="game-header">
                 <div class="title">SPECTRA</div>
                 <div class="stats">
